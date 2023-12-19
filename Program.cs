@@ -14,6 +14,8 @@ namespace NM_Laba1
             //ChordMethod.ChordMethodSolver();
             //NewtonMethod.Run();
             //TrapezoidalMethod.Run();
+            //RCL.Run();
+            Laba6.Run();
         }
     }
 
@@ -324,4 +326,181 @@ namespace NM_Laba1
             Console.ReadLine();
         }
     }
+
+    class RCL 
+    {
+        static double t0 = 0;
+        static double tn = 0.2;
+        static double h = 1e-5;
+        static double[] x0 = { 0, 0, 0 };
+        public static void Run()
+        {
+            var t_values = GenerateTimeValues(t0, tn, h);
+            var x_values = EulerMethodSystem(F, x0, t_values);
+
+            var u2_values = new double[x_values.Length];
+            var u1_values = new double[t_values.Length];
+            for (int i = 0; i < x_values.Length; i++)
+            {
+                u2_values[i] = 4 * x_values[i][2];
+                u1_values[i] = 100 * Math.Sin(2 * Math.PI * 50 * t_values[i]);
+            }
+
+            Console.WriteLine("Time (t)    u1        u2");
+            for (int i = 0; i < t_values.Length; i++)
+            {
+                Console.WriteLine($"{t_values[i],-10:F6} {u1_values[i],-10:F6} {u2_values[i],-10:F6}");
+            }
+            Console.ReadLine();
+        }
+
+        static double[][] EulerMethodSystem(Func<double, double[], double[]> F, double[] x0, double[] t_values)
+        {
+            int numSteps = t_values.Length - 1;
+            double[][] x_values = new double[t_values.Length][];
+            x_values[0] = x0;
+
+            for (int i = 0; i < numSteps; i++)
+            {
+                double[] x = x_values[i];
+                double t = t_values[i];
+                double[] x_next = new double[x.Length];
+                double[] dxdt = F(t, x);
+
+                for (int j = 0; j < x.Length; j++)
+                {
+                    x_next[j] = x[j] + h * dxdt[j];
+                }
+
+                x_values[i + 1] = x_next;
+            }
+
+            return x_values;
+        }
+
+        static double[] GenerateTimeValues(double t0, double tn, double h)
+        {
+            int numSteps = (int)((tn - t0) / h) + 1;
+            double[] t_values = new double[numSteps];
+            for (int i = 0; i < numSteps; i++)
+            {
+                t_values[i] = t0 + i * h;
+            }
+            return t_values;
+        }
+
+        static double[] F(double t, double[] x)
+        {
+            double dxdt = Math.Sin(2 * Math.PI * 50 * t) - x[0] - x[1] / 5 * 300e-6;
+            double dydt = (Math.Sin(2 * Math.PI * 50 * t) - x[0] - x[1] / 5 - x[1] / 4 - (x[1] - x[2] * 4) * 7 / (4 + 7) * 4) * 1 / 150e-6;
+            double dzdt = ((x[1] - x[2] * 4) / (4 * 7) * 0.02) * 7;
+
+            return new double[] { dxdt, dydt, dzdt };
+        }
+
+    }
+
+
+
+    class Laba6
+    {
+        static double R1 = 50;  // Ом
+        static double R2 = 60;  // Ом
+        static double R3 = 30;  // Ом
+        static double C1 = 1.54;  // мФ
+        static double C2 = 1;  // мФ
+        static double L_min = 4.7;  // Гн
+        static double L_max = 47;  // Гн
+        static double i_min = 1;  // A
+        static double i_max = 2;  // A
+
+        // Алгоритм методу Рунге-Кутта для системи
+        static void RungeKuttaSystem(double x0, double[] y0, double xEnd, double h)
+        {
+            double x = x0;
+            double y1 = y0[0];
+            double y2 = y0[1];
+            double y3 = y0[2];
+
+            while (x < xEnd)
+            {
+                Console.WriteLine($"час = {x}, " +
+                                  $"напруга на конденсаторі с1 = {y1}, " +
+                                  $"струм в індуктивності = {y2}, " +
+                                  $"напруга на конденсаторі с2 = {y3}," +
+                                  $"напруга u2 ={50 * y3}," +
+                                  $"індуктивність l2={L2(y2)}," +
+                                  $"напруга u1={u1(x)}");
+
+                double k1 = h * F1(x, y1, y2, y3);
+                double l1 = h * F2(x, y1, y2, y3);
+                double m1 = h * F3(x, y1, y2, y3);
+
+                double k2 = h * F1(x + h / 2, y1 + k1 / 2, y2 + l1 / 2, y3 + m1 / 2);
+                double l2 = h * F2(x + h / 2, y1 + k1 / 2, y2 + l1 / 2, y3 + m1 / 2);
+                double m2 = h * F3(x + h / 2, y1 + k1 / 2, y2 + l1 / 2, y3 + m1 / 2);
+
+                double k3 = h * F1(x + h / 2, y1 + 2 * k2 - k1, y2 + 2 * l2 - l1, y3 + 2 * m2 - m1);
+                double l3 = h * F2(x + h / 2, y1 + 2 * k2 - k1, y2 + 2 * l2 - l1, y3 + 2 * m2 - m1);
+                double m3 = h * F3(x + h / 2, y1 + 2 * k2 - k1, y2 + 2 * l2 - l1, y3 + 2 * m2 - m1);
+
+                y1 = y1 + (k1 + 4 * k2 + k3) / 6;
+                y2 = y2 + (l1 + 4 * l2 + l3) / 6;
+                y3 = y3 + (m1 + 4 * m2 + m3) / 6;
+
+                x = x + h;
+            }
+        }
+
+        // Функції, які описують систему диференціальних рівнянь
+        static double u1(double x)
+        {
+            double a = 0.003;
+            if (x % (2 * a) <= a)
+                return 10;
+            else
+                return (-(x % (2 * a)) * 10 / a + 10);
+        }
+
+        static double L2(double i3)
+        {
+            double a0 = (L_min * i_max * i_max - L_min * i_min * i_min - L_max * i_max * i_max + L_max * i_min * i_min) / (i_max * i_max - i_min * i_min);
+            double a1 = a0 + R1 * i_min;
+            double a2 = a0 + R1 * i_max;
+            double a3 = a0 + R2 * i_max;
+
+            if (Math.Abs(i3) <= 1)
+                return 15;
+            else if (Math.Abs(i3) <= 2)
+                return a0 + a1 * (Math.Abs(i3)) + a2 * (Math.Pow(Math.Abs(i3), 2)) + a3 * (Math.Pow(Math.Abs(i3), 3));
+            else
+                return 1.5;
+        }
+
+        static double F1(double t, double U_C1, double i3, double U_C2)
+        {
+            return (u1(t) - U_C1 - U_C2) * 1e3 / (R1 * C1);
+        }
+
+        static double F2(double t, double U_C1, double i3, double U_C2)
+        {
+            return (U_C2 - i3 * (R2 + R3)) / L2(i3);
+        }
+
+        static double F3(double t, double U_C1, double i3, double U_C2)
+        {
+            return (u1(t) - U_C1 - U_C2 - R1 * i3) * 1e3 / (R1 * C2);
+        }
+
+        public static void Run()
+        {
+            double x0 = 0;
+            double[] y0 = { 1, 0, 0 };
+            double xEnd = 0.03;
+            double h = 0.000015;
+
+            RungeKuttaSystem(x0, y0, xEnd, h);
+        }
+    }
+
 }
